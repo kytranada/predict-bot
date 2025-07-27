@@ -9,6 +9,26 @@ This project implements a simple Discord bot in Python that uses a hardcoded Gro
 
 ---
 
+## Use Case: Geo-Political/Financial Data Prediction
+
+This bot is specifically designed to scrape information from X (formerly Twitter) to identify language patterns that may indicate future geo-political or financial events. The system uses predictive linguistics techniques to analyze real-time social media discussions for early signals of upcoming events.
+
+### Data Sources
+- Verified news accounts (NYTimes, BBC, CNN, Reuters, etc.)
+- Real-time user comments and reactions to breaking news
+- Recent posts (within last 24-72 hours) with high engagement
+
+### Analysis Approach
+- Detection of anomalies and emotional archetypes
+- Identification of temporal markers implying futurity
+- Aggregation of findings by time windows and thematic clusters
+- Generation of predictions based on pattern recognition in language
+
+### System Prompt
+The bot uses a local system prompt (`system_prompt.txt`) 
+
+---
+
 ## Project Structure
 ```
 discord_predict_bot/

@@ -4,8 +4,10 @@ import os
 import aiohttp
 from dotenv import load_dotenv
 import asyncio
+from datetime import datetime, timezone
 
 # --- Configuration ---
+# Load environment variables from .env file
 load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 GROK_API_KEY = os.getenv("GROK_API_KEY")
@@ -13,18 +15,16 @@ GROK_API_ENDPOINT = os.getenv("GROK_API_ENDPOINT")
 SYSTEM_PROMPT_PATH = os.getenv("SYSTEM_PROMPT_PATH", "system_prompt.txt")
 
 # --- Bot Setup ---
-intents = discord.Intents.default()
-intents.message_content = True 
 
-# Initialize the bot with a command prefix
+intents = discord.Intents.default()
+intents.message_content = True  # Required to read message content
+
 bot = commands.Bot(command_prefix="/", intents=intents)
 
-# --- In-memory Conversation History ---
-# Store conversation history for each user.
-# The key is the user's ID, and the value is a list of messages.
 conversation_history = {}
-HISTORY_DEPTH = 10 
+HISTORY_DEPTH = 10 # Max number of messages to keep per user
 
+# --- Helper Functions ---
 
 def load_system_prompt():
     """Loads the system prompt from the specified file."""
@@ -33,8 +33,56 @@ def load_system_prompt():
             return f.read()
     except FileNotFoundError:
         print(f"Error: System prompt file not found at '{SYSTEM_PROMPT_PATH}'.")
-        return "You are a helpful assistant." 
+        return "You are a helpful assistant." # Fallback prompt
 
+def split_into_chunks(text, limit=1990):
+    """
+    Splits text into chunks of a specified limit, trying to split on
+    newlines or spaces to avoid breaking words or sentences.
+    """
+    if len(text) <= limit:
+        return [text]
+
+    chunks = []
+    while len(text) > 0:
+        if len(text) <= limit:
+            chunks.append(text)
+            break
+        
+        # Find the best position to split
+        # Prefer splitting at the last newline
+        split_pos = text.rfind('\n', 0, limit)
+        
+        # If no newline found, try splitting at the last space
+        if split_pos == -1:
+            split_pos = text.rfind(' ', 0, limit)
+            
+        # If no space or newline is found, do a hard split
+        if split_pos == -1:
+            split_pos = limit
+            
+        chunks.append(text[:split_pos])
+        # Move to the next part of the text, stripping leading whitespace
+        text = text[split_pos:].lstrip()
+        
+    return chunks
+
+def extract_predictions(full_text: str) -> str:
+    """
+    Extracts the 'Predictions' section from the AI's full response.
+    If the section is not found, it returns the full text as a fallback.
+    """
+    try:
+        prediction_marker = "Predictions"
+        marker_index = full_text.find(prediction_marker)
+        
+        if marker_index != -1:
+            return full_text[marker_index:]
+        else:
+            return full_text
+    except Exception:
+        return full_text
+    
 async def call_grok_api(user_id, user_message):
     """Calls the Grok AI API with the user's message and conversation history."""
     system_prompt = load_system_prompt()
@@ -45,7 +93,7 @@ async def call_grok_api(user_id, user_message):
 
     user_history = conversation_history[user_id]
 
-    # Construct the messages payload for the API
+    # Payload for the API
     messages = [{"role": "system", "content": system_prompt}]
     messages.extend(user_history)
     messages.append({"role": "user", "content": user_message})
@@ -59,7 +107,7 @@ async def call_grok_api(user_id, user_message):
         "model": "grok-3-mini", 
         "messages": messages,
         "temperature": 0.7,
-        "max_tokens": 3000
+        "max_tokens": 3000 
     }
 
     async with aiohttp.ClientSession() as session:
@@ -69,11 +117,9 @@ async def call_grok_api(user_id, user_message):
                     data = await response.json()
                     ai_response = data['choices'][0]['message']['content']
                     
-                   
                     user_history.append({"role": "user", "content": user_message})
                     user_history.append({"role": "assistant", "content": ai_response})
                     
-                    # Keep the conversation history within the defined depth
                     conversation_history[user_id] = user_history[-HISTORY_DEPTH*2:] # *2 for user/assistant pairs
                     
                     return ai_response
@@ -100,27 +146,25 @@ async def on_ready():
 
 # --- Slash Commands ---
 
-@bot.tree.command(name="predict", description="Get a predictive insight from the AI.")
+@bot.tree.command(name="predict", description="Get insight from the AI.")
 async def predict(interaction: discord.Interaction):
     """
     Slash command to trigger the predictive insight.
     It uses a hard-coded prompt to initiate the conversation.
     """
-    await interaction.response.defer() # Defer the response to show a loading state
+    await interaction.response.defer() 
     
     user_id = interaction.user.id
-    # The hard-coded initial prompt for the /predict command
-    initial_prompt = "Give me the latest predictive insight based on your instructions."
     
-    # Call the Grok API
-    response_text = await call_grok_api(user_id, initial_prompt)
+    today_date_str = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    initial_prompt = f"Web Bot: Analyze recent events for today, {today_date_str}. Initiate your scan and provide your predictive insights."
     
-        # **FIX:** Send the response in chunks if it's too long
+    full_response_text = await call_grok_api(user_id, initial_prompt)
+    response_text = extract_predictions(full_response_text)
+    
     if len(response_text) > 2000:
-        chunks = [response_text[i:i+1990] for i in range(0, len(response_text), 1990)]
-        # Send the first chunk as the initial followup
+        chunks = split_into_chunks(response_text)
         await interaction.followup.send(chunks[0])
-        # Send the rest of the chunks
         for chunk in chunks[1:]:
             await interaction.followup.send(chunk)
     else:
@@ -142,10 +186,19 @@ async def on_message(message):
             user_id = message.author.id
             user_message = message.content
             
-            # Show typing indicator
             async with message.channel.typing():
                 response_text = await call_grok_api(user_id, user_message)
-                await message.reply(response_text)
+                
+                if len(response_text) > 2000:
+                    chunks = split_into_chunks(response_text)
+                    await message.reply(chunks[0])
+                    for chunk in chunks[1:]:
+                        await message.channel.send(chunk)
+                else:
+                    await message.reply(response_text)
+
+    # This line is needed for future reply message-based commands.
+    # await bot.process_commands(message)
 
 # --- Main Execution ---
 
