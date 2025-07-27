@@ -1,6 +1,6 @@
 # Discord Grok AI Bot (Python)
 
-This project implements a simple Discord bot in Python that uses a hardcoded Grok AI prompt to generate insights and supports threaded follow-up Q&A per user. The bot listens for messages starting with `/predict` and maintains conversation context for each user.
+This project implements a simple Discord bot in Python that uses a Grok AI prompt to generate insights and supports threaded follow-up Q&A per user. The bot listens for messages starting with `/predict` and maintains conversation context for each user.
 
 ## Features
 - `/predict <your question>`: Runs the hardcoded Grok prompt combined with your question

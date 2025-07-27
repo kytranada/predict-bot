@@ -12,7 +12,8 @@ load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 GROK_API_KEY = os.getenv("GROK_API_KEY")
 GROK_API_ENDPOINT = os.getenv("GROK_API_ENDPOINT")
-SYSTEM_PROMPT_PATH = os.getenv("SYSTEM_PROMPT_PATH", "system_prompt.txt")
+ECONOMIC_PROMPT_PATH = os.getenv("ECONOMIC_PROMPT_PATH", "economic_prompt.txt")
+GEOPOLITICAL_PROMPT_PATH = os.getenv("GEOPOLITICAL_PROMPT_PATH", "geopolitical_prompt.txt")
 
 # --- Bot Setup ---
 
@@ -26,14 +27,14 @@ HISTORY_DEPTH = 10 # Max number of messages to keep per user
 
 # --- Helper Functions ---
 
-def load_system_prompt():
-    """Loads the system prompt from the specified file."""
+def load_prompt(file_path, fallback_prompt="You are a helpful assistant."):
+    """Loads a prompt from a file."""
     try:
-        with open(SYSTEM_PROMPT_PATH, "r", encoding="utf-8") as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
-        print(f"Error: System prompt file not found at '{SYSTEM_PROMPT_PATH}'.")
-        return "You are a helpful assistant." # Fallback prompt
+        print(f"Error: Prompt file not found at '{file_path}'.")
+        return fallback_prompt
 
 def split_into_chunks(text, limit=1990):
     """
@@ -73,27 +74,44 @@ def extract_predictions(full_text: str) -> str:
     If the section is not found, it returns the full text as a fallback.
     """
     try:
-        prediction_marker = "Predictions"
-        marker_index = full_text.find(prediction_marker)
+        markers = ["Predictions", "Market Predictions and Trading Strategies"]
         
-        if marker_index != -1:
-            return full_text[marker_index:]
-        else:
-            return full_text
+        for marker in markers:
+            marker_index = full_text.find(marker)
+            if marker_index != -1:
+                return full_text[marker_index:]
+
+        return full_text
     except Exception:
         return full_text
-    
-async def call_grok_api(user_id, user_message):
+
+async def send_response(destination, text):
+    """Sends a response, handling chunking for long messages."""
+    if len(text) > 2000:
+        chunks = split_into_chunks(text)
+        if isinstance(destination, discord.Interaction):
+            await destination.followup.send(chunks[0])
+            for chunk in chunks[1:]:
+                await destination.channel.send(chunk)
+        # For messages (replies)
+        else:
+            await destination.reply(chunks[0])
+            for chunk in chunks[1:]:
+                await destination.channel.send(chunk)
+    else:
+        if isinstance(destination, discord.Interaction):
+            await destination.followup.send(text)
+        else:
+            await destination.reply(text)
+
+async def call_grok_api(user_id, user_message, system_prompt):
     """Calls the Grok AI API with the user's message and conversation history."""
-    system_prompt = load_system_prompt()
-    
     # Get or create the user's history
     if user_id not in conversation_history:
         conversation_history[user_id] = []
 
     user_history = conversation_history[user_id]
 
-    # Payload for the API
     messages = [{"role": "system", "content": system_prompt}]
     messages.extend(user_history)
     messages.append({"role": "user", "content": user_message})
@@ -146,29 +164,30 @@ async def on_ready():
 
 # --- Slash Commands ---
 
-@bot.tree.command(name="predict", description="Get insight from the AI.")
-async def predict(interaction: discord.Interaction):
-    """
-    Slash command to trigger the predictive insight.
-    It uses a hard-coded prompt to initiate the conversation.
-    """
-    await interaction.response.defer() 
+async def handle_insight_command(interaction: discord.Interaction, prompt_path: str):
+    """Handles the logic for insight-based slash commands."""
+    await interaction.response.defer()
     
     user_id = interaction.user.id
+    system_prompt = load_prompt(prompt_path)
     
     today_date_str = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-    initial_prompt = f"Web Bot: Analyze recent events for today, {today_date_str}. Initiate your scan and provide your predictive insights."
+    initial_prompt = f"Web Bot: Analyze recent events for today, {today_date_str}. Initiate your scan and provide your insights."
     
-    full_response_text = await call_grok_api(user_id, initial_prompt)
+    full_response_text = await call_grok_api(user_id, initial_prompt, system_prompt)
     response_text = extract_predictions(full_response_text)
     
-    if len(response_text) > 2000:
-        chunks = split_into_chunks(response_text)
-        await interaction.followup.send(chunks[0])
-        for chunk in chunks[1:]:
-            await interaction.followup.send(chunk)
-    else:
-        await interaction.followup.send(response_text)
+    await send_response(interaction, response_text)
+
+@bot.tree.command(name="geopolitical", description="Get geopolitical insight from the AI.")
+async def geopolitical(interaction: discord.Interaction):
+    """Slash command to trigger the geopolitical predictive insight."""
+    await handle_insight_command(interaction, GEOPOLITICAL_PROMPT_PATH)
+
+@bot.tree.command(name="economic", description="Get economic insight from AI.")
+async def economic(interaction: discord.Interaction):
+    """Slash command to trigger the economic predictive insight."""
+    await handle_insight_command(interaction, ECONOMIC_PROMPT_PATH)
 
 @bot.event
 async def on_message(message):
@@ -186,19 +205,12 @@ async def on_message(message):
             user_id = message.author.id
             user_message = message.content
             
+            # For follow-ups, we'll use a generic prompt and rely on conversation history.
+            system_prompt = "You are a helpful assistant. Please respond to the user's follow-up question."
+            
             async with message.channel.typing():
-                response_text = await call_grok_api(user_id, user_message)
-                
-                if len(response_text) > 2000:
-                    chunks = split_into_chunks(response_text)
-                    await message.reply(chunks[0])
-                    for chunk in chunks[1:]:
-                        await message.channel.send(chunk)
-                else:
-                    await message.reply(response_text)
-
-    # This line is needed for future reply message-based commands.
-    # await bot.process_commands(message)
+                response_text = await call_grok_api(user_id, user_message, system_prompt)
+                await send_response(message, response_text)
 
 # --- Main Execution ---
 
