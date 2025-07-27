@@ -1,16 +1,16 @@
 # Discord Grok AI Bot (Python)
 
-This project implements a Discord bot in Python that uses the Grok AI API to generate geopolitical and economic insights. The bot supports slash commands for different types of predictions and maintains conversation history for follow-up questions.
+This project implements a Discord bot in Python that uses the Grok AI API to generate geopolitical and economic insights. The bot supports slash commands for different types of analysis and maintains conversation history for follow-up questions.
 
 ## Features
-- `/geopolitical`: Generates geopolitical insights based on a specialized prompt.
-- `/economic`: Generates economic insights based on a specialized prompt.
+- `/geopolitical`: Generates geopolitical analysis based on a specialized prompt.
+- `/economic`: Generates economic analysis based on a specialized prompt.
 - **Follow-up Questions**: Users can reply to the bot's messages to ask follow-up questions within the same context.
 - **Modular Design**: The code is structured to be easily maintainable and extensible.
 
 ---
 
-## Use Case: Geo-Political/Financial Data Prediction
+## Use Case: Geo-Political/Financial Data Analysis
 
 This bot is specifically designed to scrape information from X (formerly Twitter) to identify language patterns that may indicate future geo-political or financial events. The system uses predictive linguistics techniques to analyze real-time social media discussions for early signals of upcoming events.
 
@@ -27,8 +27,8 @@ This bot is specifically designed to scrape information from X (formerly Twitter
 
 ### System Prompts
 The bot uses local prompt files for different commands:
-- `predict_prompt.txt`: Used for the `/predict` command to generate geopolitical insights.
-- `economic_prompt.txt`: Used for the `/economic` command to generate economic insights.
+- `predict_prompt.txt`: Used for the `/predict` command to generate geopolitical analysis.
+- `economic_prompt.txt`: Used for the `/economic` command to generate economic analysis.
 
 ---
 
@@ -82,11 +82,11 @@ discord_predict_bot/
 ---
 
 ## Usage
-- **Geopolitical Insights**:
+- **Geopolitical Analysis**:
   ```
   /predict
   ```
-- **Economic Insights**:
+- **Economic Analysis**:
   ```
   /economic
   ```
