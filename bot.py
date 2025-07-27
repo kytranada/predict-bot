@@ -59,7 +59,7 @@ async def call_grok_api(user_id, user_message):
         "model": "grok-3-mini", 
         "messages": messages,
         "temperature": 0.7,
-        "max_tokens": 1500
+        "max_tokens": 3000
     }
 
     async with aiohttp.ClientSession() as session:
@@ -115,8 +115,16 @@ async def predict(interaction: discord.Interaction):
     # Call the Grok API
     response_text = await call_grok_api(user_id, initial_prompt)
     
-    # Send the response
-    await interaction.followup.send(response_text)
+        # **FIX:** Send the response in chunks if it's too long
+    if len(response_text) > 2000:
+        chunks = [response_text[i:i+1990] for i in range(0, len(response_text), 1990)]
+        # Send the first chunk as the initial followup
+        await interaction.followup.send(chunks[0])
+        # Send the rest of the chunks
+        for chunk in chunks[1:]:
+            await interaction.followup.send(chunk)
+    else:
+        await interaction.followup.send(response_text)
 
 @bot.event
 async def on_message(message):
