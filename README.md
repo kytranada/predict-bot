@@ -1,11 +1,12 @@
 # Discord Grok AI Bot (Python)
 
-This project implements a simple Discord bot in Python that uses a Grok AI prompt to generate insights and supports threaded follow-up Q&A per user. The bot listens for messages starting with `/predict` and maintains conversation context for each user.
+This project implements a Discord bot in Python that uses the Grok AI API to generate geopolitical and economic insights. The bot supports slash commands for different types of predictions and maintains conversation history for follow-up questions.
 
 ## Features
-- `/predict <your question>`: Runs the hardcoded Grok prompt combined with your question
-- Context maintained per user session for follow-up questions
-- Async usage with `discord.py`
+- `/geopolitical`: Generates geopolitical insights based on a specialized prompt.
+- `/economic`: Generates economic insights based on a specialized prompt.
+- **Follow-up Questions**: Users can reply to the bot's messages to ask follow-up questions within the same context.
+- **Modular Design**: The code is structured to be easily maintainable and extensible.
 
 ---
 
@@ -24,17 +25,21 @@ This bot is specifically designed to scrape information from X (formerly Twitter
 - Aggregation of findings by time windows and thematic clusters
 - Generation of predictions based on pattern recognition in language
 
-### System Prompt
-The bot uses a local system prompt (`system_prompt.txt`) 
+### System Prompts
+The bot uses local prompt files for different commands:
+- `predict_prompt.txt`: Used for the `/predict` command to generate geopolitical insights.
+- `economic_prompt.txt`: Used for the `/economic` command to generate economic insights.
 
 ---
 
 ## Project Structure
 ```
 discord_predict_bot/
-├── bot.py          # Main bot implementation
-├── requirements.txt
-└── .env.example    # Example environment variables
+├── bot.py              # Main bot logic
+├── requirements.txt    # Python dependencies
+├── .env                # Environment variables (ignored by git)
+├── predict_prompt.txt  # Prompt for geopolitical analysis
+└── economic_prompt.txt # Prompt for economic analysis
 ```
 
 ## Setup & Installation
@@ -63,8 +68,11 @@ discord_predict_bot/
    ```dotenv
    DISCORD_TOKEN=YOUR_DISCORD_BOT_TOKEN
    GROK_API_KEY=YOUR_GROK_API_KEY
-   GROK_API_ENDPOINT=https://api.grok.ai/v1/chat/completions
+   GROK_API_ENDPOINT=https://api.groq.com/openai/v1/chat/completions
+   SYSTEM_PROMPT_PATH=predict_prompt.txt
+   ECONOMIC_PROMPT_PATH=economic_prompt.txt
    ```
+   *Note: The `SYSTEM_PROMPT_PATH` and `ECONOMIC_PROMPT_PATH` variables are optional and will default to `predict_prompt.txt` and `economic_prompt.txt` respectively.*
 
 5. **Run the bot**
    ```bash
@@ -74,9 +82,13 @@ discord_predict_bot/
 ---
 
 ## Usage
-- In any channel where the bot has access, type:
+- **Geopolitical Insights**:
   ```
-  /predict Summarize the latest market trends in AI.
+  /predict
   ```
-- The bot will reply with insights based on the hardcoded Grok prompt and your query.
-- For follow-up Q&A, simply send another message starting with `/predict` and your follow-up; the bot will maintain context.
+- **Economic Insights**:
+  ```
+  /economic
+  ```
+- **Follow-up Questions**:
+  To ask a follow-up question, simply reply to one of the bot's messages with your query. The bot will use the conversation history to provide a contextual answer.
