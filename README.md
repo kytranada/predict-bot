@@ -12,7 +12,7 @@ This project implements a Discord bot in Python that uses the Grok AI API to gen
 
 ## Use Case: Geo-Political/Financial Data Analysis
 
-This bot is specifically designed to scrape information from X (formerly Twitter) to identify language patterns that may indicate future geo-political or financial events. The system uses predictive linguistics techniques to analyze real-time social media discussions for early signals of upcoming events.
+This bot is specifically designed to scrape information from X (formerly Twitter) to identify language patterns that may indicate geo-political or financial events. The system uses predictive linguistics techniques to analyze real-time social media discussions for early signals of upcoming events.
 
 ### Data Sources
 - Verified news accounts (NYTimes, BBC, CNN, Reuters, etc.)
@@ -23,7 +23,7 @@ This bot is specifically designed to scrape information from X (formerly Twitter
 - Detection of anomalies and emotional archetypes
 - Identification of temporal markers implying futurity
 - Aggregation of findings by time windows and thematic clusters
-- Generation of predictions based on pattern recognition in language
+- Generation of analysis reports based on pattern recognition in language
 
 ### System Prompts
 The bot uses local prompt files for different commands:
